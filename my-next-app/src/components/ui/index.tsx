@@ -1,6 +1,5 @@
 import React from "react";
 
-// Reusable Button Component
 export const Button = ({
   children,
   onClick,
@@ -18,7 +17,6 @@ export const Button = ({
   </button>
 );
 
-// Reusable Card Component
 export const Card = ({
   children,
   className,
@@ -26,19 +24,15 @@ export const Card = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div
-    className={`bg-white rounded-2xl shadow-xl p-6 w-[400px] ${className}`}
-  >
+  <div className={`bg-white rounded-2xl shadow-xl p-6 w-[400px] ${className}`}>
     {children}
   </div>
 );
 
-// Card Content Wrapper
 export const CardContent = ({ children }: { children: React.ReactNode }) => (
   <div className="p-4">{children}</div>
 );
 
-// Reusable Input Component
 export const Input = ({
   value,
   onChange,

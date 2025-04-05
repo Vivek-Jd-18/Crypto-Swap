@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { EVMNetwork, getRpcUrl } from "@/services/evmNetworks";
+import { EVMNetwork } from "@/services/evmNetworks";
 
 interface HeaderProps {
   walletAddress: string;
-  selectedChain: EVMNetwork;
-  provider: ethers.JsonRpcProvider | null;
+  selectedChain: keyof typeof EVMNetwork; // 'ethereum' | 'bsc'
+  provider: ethers.BrowserProvider | null;
 }
 
 const Header = ({ walletAddress, selectedChain, provider }: HeaderProps) => {
@@ -29,27 +29,48 @@ const Header = ({ walletAddress, selectedChain, provider }: HeaderProps) => {
     fetchBalance();
   }, [provider, walletAddress]);
 
+  const getChainLabel = (chain: keyof typeof EVMNetwork) =>
+    chain === "ethereum" ? "Ethereum" : "BNB Chain";
+
+  const getTokenSymbol = (chain: keyof typeof EVMNetwork) =>
+    chain === "ethereum" ? "ETH" : "BNB";
+
   return (
-    <div className="sticky top-0 w-full p-4 bg-gray-800 shadow-md text-center text-white z-10">
-      <h1 className="text-3xl font-bold mb-2">Crypto Swap</h1>
-      <p>
-        Wallet Address:{" "}
-        <span className="font-mono text-green-400">
-          {walletAddress || "Not Connected"}
-        </span>
-      </p>
-      <p>
-        Current Network:{" "}
-        <span className="font-mono text-blue-400">
-          {selectedChain === EVMNetwork.ETHEREUM_MAINNET ? "Ethereum Mainnet" : "Binance Smart Chain"}
-        </span>
-      </p>
-      <p>
-        Balance:{" "}
-        <span className="font-mono text-yellow-400">
-          {balance ? `${balance} ${selectedChain === EVMNetwork.ETHEREUM_MAINNET ? "ETH" : "BNB"}` : "Fetching..."}
-        </span>
-      </p>
+    <div className="sticky top-0 w-full px-6 py-4 bg-gray-800 shadow-md text-white z-10">
+      <div className="flex justify-between items-start w-full max-w-7xl mx-auto">
+        <div className="text-2xl font-bold">Crypto Swap</div>
+
+        {/* Center: Wallet Address */}
+        <div className="text-sm font-mono text-green-400 text-center truncate max-w-[300px] mt-2">
+          {walletAddress ? `Wallet: ${walletAddress}` : "Wallet not Connected"}
+        </div>
+
+        {/* Right: Network + Balance */}
+        <div className="text-right text-sm space-y-1">
+          {balance ? (
+            <div>
+              Network:{" "}
+              <span className="font-mono text-blue-400">
+                {getChainLabel(selectedChain)}
+              </span>
+            </div>
+          ) : (
+            <></>
+          )}
+          {balance ? (
+            <div>
+              Balance:{" "}
+              <span className="font-mono text-yellow-400">
+                {balance
+                  ? `${balance} ${getTokenSymbol(selectedChain)}`
+                  : "Not Connected"}
+              </span>
+            </div>
+          ) : (
+            <></>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
