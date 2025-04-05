@@ -1,4 +1,4 @@
-Here's a detailed **README.md** you can use for your Next.js Crypto Swap Interface project:
+Absolutely! Here's your updated **README.md** with the demo video included:
 
 ---
 
@@ -8,6 +8,14 @@ Here's a detailed **README.md** you can use for your Next.js Crypto Swap Interfa
 This is a simple crypto token swap demo interface built using **Next.js**, **KyberSwap Aggregator API**, and **MetaMask**. The app supports Ethereum and Binance Smart Chain (BSC) networks and allows users to connect their MetaMask wallet, select tokens, and perform a token swap.
 
 > ⚠️ This is a live **mainnet demo** — you need real tokens in your MetaMask wallet for swaps to execute successfully.
+
+---
+
+## 🎥 Demo Video
+
+Watch the live demo of the app in action:
+
+📺 **[Click here to view the video](https://drive.google.com/file/d/1GCzURs4k1yYfw5JOmxK9wz6JdnC4Pe_m/view?usp=sharing)**
 
 ---
 
@@ -115,4 +123,4 @@ Feel free to fork the repo, open issues, or submit pull requests if you find bug
 
 ---
 
-Let me know if you'd like to add images (screenshots or GIF), environment variable setup (if any), or turn this into a GitHub-ready repo with badges and links!
+Let me know if you want me to convert this into a styled `README.md` file and download it for you.
