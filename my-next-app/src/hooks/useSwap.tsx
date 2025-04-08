@@ -47,9 +47,12 @@ export const useSwap = () => {
       const { amountOut } = response.data.data.routeSummary;
       const formattedOut = ethers.formatEther(amountOut).toString();
       setSwapResult(formattedOut);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Quote error:", err);
-      setSwapError("Failed to fetch quote.");
+      setSwapError(
+        err?.response?.data?.message ||
+          "Failed to fetch quote. Please try again.",
+      );
     }
   };
 
@@ -58,15 +61,18 @@ export const useSwap = () => {
     tokenIn,
     tokenOut,
     amount,
+    slippage,
     provider,
   }: {
     network: string;
     tokenIn: string;
     tokenOut: string;
     amount: string;
+    slippage: string;
     provider: ethers.BrowserProvider;
   }) => {
     try {
+      console.log(slippage, "slippage");
       const signerInstance = await provider.getSigner();
       const tokenContract = new ethers.Contract(
         tokenIn,
@@ -93,11 +99,13 @@ export const useSwap = () => {
         .toString();
       setSwapResult(formattedOut);
 
+      const slippageTolerance = parseFloat(slippage) * 100;
+
       const buildPayload = {
         routeSummary,
         sender: walletAddress,
         recipient: walletAddress,
-        slippageTolerance: 10,
+        slippageTolerance,
       };
 
       const builtTx = await axios.post(
@@ -130,7 +138,11 @@ export const useSwap = () => {
       console.log("Transaction complete:", txReceipt.hash);
     } catch (execErr: any) {
       console.error("Swap failed:", execErr);
-      setSwapError(execErr.message);
+      setSwapError(
+        execErr?.response?.data?.message ||
+          execErr?.message ||
+          "Swap failed. Please check your wallet and try again.",
+      );
     }
   };
 
@@ -145,26 +157,26 @@ export const useSwap = () => {
       };
 
       const [ethTokens, bscTokens] = await Promise.all([
-        fetchTokens(1), // Ethereum
-        fetchTokens(56), // BNB
+        fetchTokens(1),
+        fetchTokens(56),
       ]);
 
       setEthereumTokens(ethTokens);
       setBnbTokens(bscTokens);
-    } catch (error) {
-      console.error("Error fetching token lists:", error);
-      setSwapError("Unable to fetch token lists.");
+    } catch (err) {
+      console.error("Failed to fetch token lists:", err);
     }
   };
 
   return {
     amountOut: swapResult,
+    rawTx: rawSwapData,
     error: swapError,
-    setError: setSwapError,
-    handleSwap: executeSwap,
-    fetchQuote: getQuote,
-    fetchTokenList,
     ethereumTokens,
     bnbTokens,
+    setError: setSwapError,
+    fetchQuote: getQuote,
+    handleSwap: executeSwap,
+    fetchTokenList,
   };
 };

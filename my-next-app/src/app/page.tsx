@@ -17,6 +17,7 @@ const CryptoSwap = () => {
   const [toToken, setToToken] = useState("");
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
+  const [slippage, setSlippage] = useState("0.01");
 
   const {
     walletAddress,
@@ -85,6 +86,7 @@ const CryptoSwap = () => {
         tokenIn: fromToken,
         tokenOut: toToken,
         amount,
+        slippage,
         provider,
       });
     } catch (e) {
@@ -155,16 +157,50 @@ const CryptoSwap = () => {
         <Card className="bg-zinc-600 text-white w-[350px]">
           <CardContent>
             <label className="text-sm mb-1 text-gray-300">Select Chain</label>
-            <select
+            <Listbox
               value={selectedChain}
-              onChange={(e) =>
-                onNetworkChange(e.target.value as keyof typeof EVMNetwork)
+              onChange={(val) =>
+                onNetworkChange(val as keyof typeof EVMNetwork)
               }
-              className="w-full mb-4 p-3 border rounded-xl bg-gray-700 text-white"
             >
-              <option value="ethereum">Ethereum</option>
-              <option value="bsc">Binance Smart Chain</option>
-            </select>
+              <div className="relative">
+                <Listbox.Button className="w-full p-3 border rounded-xl bg-gray-700 text-white flex items-center justify-between">
+                  <span className="flex items-center gap-2 capitalize">
+                    <img
+                      src={EVMNetwork[selectedChain].logoURI}
+                      alt={EVMNetwork[selectedChain].name}
+                      className="w-4 h-4 rounded-full object-contain"
+                    />
+                    {EVMNetwork[selectedChain].name}
+                  </span>
+                  <ChevronUpDownIcon className="w-5 h-5 text-gray-400" />
+                </Listbox.Button>
+
+                <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-gray-700 py-1 text-base text-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                  {Object.entries(EVMNetwork).map(([key, network]) => (
+                    <Listbox.Option
+                      key={key}
+                      value={key}
+                      className={({ active }) =>
+                        `cursor-pointer select-none relative py-2 px-4 ${
+                          active ? "bg-gray-600" : ""
+                        }`
+                      }
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={network.logoURI}
+                          alt={network.name}
+                          className="w-4 h-4 rounded-full object-contain"
+                        />
+                        <span>{network.name}</span>
+                      </div>
+                    </Listbox.Option>
+                  ))}
+                </Listbox.Options>
+              </div>
+            </Listbox>
+
             {/* From Token */}
             <label className="text-sm mb-1 text-gray-300">From Token</label>
             <Listbox value={fromToken} onChange={setFromToken}>
@@ -281,6 +317,18 @@ const CryptoSwap = () => {
               inputMode="decimal"
               className="w-full mb-4 p-3 rounded-xl bg-gray-700 text-white placeholder-gray-400"
             />
+
+            <label className="text-sm mb-1 text-gray-300">Slippage</label>
+            <select
+              value={slippage}
+              onChange={(e) => setSlippage(e.target.value)}
+              className="w-full mb-4 p-3 rounded-xl bg-gray-700 text-white"
+            >
+              <option value="0.01">0.01%</option>
+              <option value="0.05">0.05%</option>
+              <option value="0.1">0.1%</option>
+              <option value="1">1%</option>
+            </select>
             <label className="text-sm mb-1 text-gray-300">Estimated Out</label>
             <input
               value={isAmountValid ? amountOut : ""}
