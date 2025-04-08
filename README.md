@@ -35,8 +35,8 @@ Watch the live demo of the app in action:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone git@github.com:Vivek-Jd-18/ezi-pay-wallet-blockchain.git
+cd ezi-pay-wallet-blockchain
 ```
 
 ### 2. Install Dependencies
