@@ -100,7 +100,6 @@ export const useSwap = () => {
       setSwapResult(formattedOut);
 
       const slippageTolerance = parseFloat(slippage) * 100;
-
       const buildPayload = {
         routeSummary,
         sender: walletAddress,
@@ -138,11 +137,21 @@ export const useSwap = () => {
       console.log("Transaction complete:", txReceipt.hash);
     } catch (execErr: any) {
       console.error("Swap failed:", execErr);
-      setSwapError(
-        execErr?.response?.data?.message ||
-          execErr?.message ||
-          "Swap failed. Please check your wallet and try again.",
-      );
+
+      // Check if the error is related to user rejection
+      if (
+        execErr.code === "ACTION_REJECTED" ||
+        execErr.message.includes("User rejected the request")
+      ) {
+        setSwapError("User rejected the transaction.");
+        throw new Error("User rejected the transaction.");
+      } else {
+        setSwapError(
+          execErr?.response?.data?.message ||
+            execErr?.message ||
+            "Swap failed. Please check your wallet and try again.",
+        );
+      }
     }
   };
 

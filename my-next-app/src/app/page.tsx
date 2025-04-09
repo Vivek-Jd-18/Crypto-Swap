@@ -10,7 +10,11 @@ import { useSwap } from "@/hooks/useSwap";
 import axios from "axios";
 import { Listbox } from "@headlessui/react";
 import { ChevronUpDownIcon } from "@heroicons/react/20/solid";
-import { DynamicWidget, useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import {
+  DynamicWidget,
+  getNetwork,
+  useDynamicContext,
+} from "@dynamic-labs/sdk-react-core";
 import { getWeb3Provider, getSigner } from "@dynamic-labs/ethers-v6";
 
 const CryptoSwap = () => {
@@ -20,14 +24,10 @@ const CryptoSwap = () => {
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [slippage, setSlippage] = useState("0.01");
+  const [nw, setNw] = useState("ethereum");
 
-  const fetchWallet = async () => {
-    const { primaryWallet } = useDynamicContext();
+  const { primaryWallet } = useDynamicContext();
 
-    const provider = await getWeb3Provider(primaryWallet!);
-    const signer = await getSigner(primaryWallet!);
-    console.log(primaryWallet?.address, provider, signer, "fetchWallet");
-  };
   const {
     walletAddress,
     selectedChain,
@@ -35,7 +35,6 @@ const CryptoSwap = () => {
     error,
     setError,
     handleChainChange,
-    connectWallet,
   } = useWallet("ethereum");
 
   const {
@@ -69,13 +68,13 @@ const CryptoSwap = () => {
     }
   };
 
-  const onNetworkChange = (value: keyof typeof EVMNetwork) => {
-    handleChainChange(value);
-    const chainId = value === "bsc" ? 56 : 1;
-    fetchTokens(chainId);
-    setAmount("");
-    setSwapError("");
-  };
+  // const onNetworkChange = async (value: keyof typeof EVMNetwork) => {
+  //   await handleChainChange(value);
+  //   const chainId = value === "bsc" ? 56 : 1;
+  //   fetchTokens(chainId);
+  //   setAmount("");
+  //   setSwapError("");
+  // };
 
   const onSwap = async () => {
     if (!walletAddress || !provider) {
@@ -87,16 +86,22 @@ const CryptoSwap = () => {
       setError("Enter a valid amount greater than zero.");
       return;
     }
+    if (!primaryWallet) {
+      setError("No wallet connected");
+      return;
+    }
+
+    const _provider = await getWeb3Provider(primaryWallet);
 
     try {
       setIsSwapping(true);
       await handleSwap({
-        network: selectedChain,
+        network: nw,
         tokenIn: fromToken,
         tokenOut: toToken,
         amount,
         slippage,
-        provider,
+        provider: _provider,
       });
     } catch (e) {
       console.error(e);
@@ -125,7 +130,7 @@ const CryptoSwap = () => {
   useEffect(() => {
     if (amount && fromToken && toToken && selectedChain && Number(amount) > 0) {
       fetchQuote({
-        network: selectedChain,
+        network: nw,
         tokenIn: fromToken,
         tokenOut: toToken,
         amount,
@@ -150,8 +155,39 @@ const CryptoSwap = () => {
   }, [swapError]);
 
   useEffect(() => {
-    
-  },[])
+    if (!primaryWallet?.connector) return;
+
+    const checkNetwork = async () => {
+      const network = await getNetwork(primaryWallet.connector);
+      if (network === 56) {
+        setNw("bsc");
+      } else {
+        setNw("ethereum");
+      }
+      console.log("My Network:", network);
+    };
+
+    checkNetwork();
+    const intervalId = setInterval(checkNetwork, 5000);
+    return () => clearInterval(intervalId);
+  }, [primaryWallet]);
+
+  useEffect(() => {
+    if (!primaryWallet?.connector) return;
+
+    const checkNetwork = async () => {
+      const network = await getNetwork(primaryWallet.connector);
+      fetchTokens(network);
+    };
+
+    checkNetwork();
+
+    // Set up an interval to periodically check the network
+    const intervalId = setInterval(checkNetwork, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [primaryWallet]);
+
   const isAmountValid = amount && Number(amount) > 0;
 
   const getTokenDetails = (address: string) =>
@@ -161,15 +197,15 @@ const CryptoSwap = () => {
     <div className="bg-gray-900 text-white min-h-screen">
       <Header
         walletAddress={walletAddress}
-        selectedChain={selectedChain}
+        selectedChain={nw === "bsc" ? "bsc" : "ethereum"}
         provider={provider}
       />
-
       <div className="flex flex-col items-center justify-center pt-8">
         <Card className="bg-zinc-600 text-white w-[350px]">
           <CardContent>
             <label className="text-sm mb-1 text-gray-300">Select Chain</label>
-            <Listbox
+            <DynamicWidget />
+            {/* <Listbox
               value={selectedChain}
               onChange={(val) =>
                 onNetworkChange(val as keyof typeof EVMNetwork)
@@ -211,51 +247,53 @@ const CryptoSwap = () => {
                   ))}
                 </Listbox.Options>
               </div>
-            </Listbox>
+            </Listbox> */}
 
             {/* From Token */}
-            <label className="text-sm mb-1 text-gray-300">From Token</label>
-            <Listbox value={fromToken} onChange={setFromToken}>
-              <div className="relative mb-4">
-                <Listbox.Button className="w-full p-3 border rounded-xl bg-gray-700 text-white flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    {getTokenDetails(fromToken)?.logoURI ? (
-                      <img
-                        src={getTokenDetails(fromToken)?.logoURI}
-                        alt=""
-                        className="w-5 h-5 rounded-full"
-                      />
-                    ) : null}
-                    {getTokenDetails(fromToken)?.symbol}
-                  </span>
-                  <ChevronUpDownIcon className="w-5 h-5 text-gray-400" />
-                </Listbox.Button>
-                <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-gray-700 py-1 text-base text-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                  {tokens.map((token) => (
-                    <Listbox.Option
-                      key={token.address}
-                      value={token.address}
-                      className={({ active }) =>
-                        `cursor-pointer select-none relative py-2 px-4 ${
-                          active ? "bg-gray-600" : ""
-                        }`
-                      }
-                    >
-                      <div className="flex items-center gap-2">
-                        {token.logoURI ? (
-                          <img
-                            src={token.logoURI}
-                            alt={token.symbol}
-                            className="w-5 h-5 rounded-full"
-                          />
-                        ) : null}
-                        <span>{token.symbol}</span>
-                      </div>
-                    </Listbox.Option>
-                  ))}
-                </Listbox.Options>
-              </div>
-            </Listbox>
+            <div className="mt-3.5">
+              <label className="text-sm mb-1 text-gray-300">From Token</label>
+              <Listbox value={fromToken} onChange={setFromToken}>
+                <div className="relative mb-4">
+                  <Listbox.Button className="w-full p-3 border rounded-xl bg-gray-700 text-white flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      {getTokenDetails(fromToken)?.logoURI ? (
+                        <img
+                          src={getTokenDetails(fromToken)?.logoURI}
+                          alt=""
+                          className="w-5 h-5 rounded-full"
+                        />
+                      ) : null}
+                      {getTokenDetails(fromToken)?.symbol}
+                    </span>
+                    <ChevronUpDownIcon className="w-5 h-5 text-gray-400" />
+                  </Listbox.Button>
+                  <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-gray-700 py-1 text-base text-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                    {tokens.map((token) => (
+                      <Listbox.Option
+                        key={token.address}
+                        value={token.address}
+                        className={({ active }) =>
+                          `cursor-pointer select-none relative py-2 px-4 ${
+                            active ? "bg-gray-600" : ""
+                          }`
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          {token.logoURI ? (
+                            <img
+                              src={token.logoURI}
+                              alt={token.symbol}
+                              className="w-5 h-5 rounded-full"
+                            />
+                          ) : null}
+                          <span>{token.symbol}</span>
+                        </div>
+                      </Listbox.Option>
+                    ))}
+                  </Listbox.Options>
+                </div>
+              </Listbox>
+            </div>
 
             {/* Swap Icon Button */}
             <div className="flex justify-center mb-4">
@@ -357,7 +395,6 @@ const CryptoSwap = () => {
             >
               {walletAddress ? "Wallet Connected" : "Connect Wallet"}
             </Button> */}
-            <DynamicWidget />
             <Button
               className={`w-full ${
                 !isAmountValid || isSwapping

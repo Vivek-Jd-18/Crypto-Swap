@@ -1,17 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { EVMNetwork } from "@/services/evmNetworks";
+import { getNetwork, useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { getSigner, getWeb3Provider } from "@dynamic-labs/ethers-v6";
 
-type SupportedNetwork = keyof typeof EVMNetwork; // 'ethereum' | 'bsc'
+type SupportedNetwork = keyof typeof EVMNetwork;
 
 export const useWallet = (initialChain: SupportedNetwork) => {
-  const [walletAddress, setWalletAddress] = useState("");
   const [selectedChain, setSelectedChain] =
     useState<SupportedNetwork>(initialChain);
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [walletAddress, setWalletAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const { primaryWallet } = useDynamicContext();
+
+  const connectWallet = async () => {
+    if (!primaryWallet) {
+      setError("No wallet connected");
+      return;
+    }
+
+    try {
+      const ethersProvider = await getWeb3Provider(primaryWallet);
+      console.log("ethersProvider", ethersProvider);
+      setProvider(ethersProvider); // ✅ now provider is ready
+      setWalletAddress(primaryWallet.address || "");
+    } catch (err) {
+      console.error("Dynamic wallet connect error", err);
+      setError("Failed to connect Dynamic wallet");
+    }
+  };
 
   const handleChainChange = async (chain: SupportedNetwork) => {
     if (!(chain in EVMNetwork)) {
@@ -19,83 +40,63 @@ export const useWallet = (initialChain: SupportedNetwork) => {
       return;
     }
 
-    const { chainId, name } = EVMNetwork[chain];
-    const rpcUrl =
-      chain === "bsc"
-        ? "https://bsc-dataseed.binance.org"
-        : "https://mainnet.infura.io/v3/YOUR_INFURA_KEY";
-
     setSelectedChain(chain);
     setError(null);
 
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) {
-      setError("MetaMask not detected");
-      return;
-    }
-
     try {
-      await ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId }],
-      });
-    } catch (switchError: any) {
-      if (switchError.code === 4902) {
-        try {
-          await ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId,
-                chainName: name,
-                rpcUrls: [rpcUrl],
-                nativeCurrency: {
-                  name: chain === "bsc" ? "BNB" : "Ether",
-                  symbol: chain === "bsc" ? "BNB" : "ETH",
-                  decimals: 18,
-                },
-                blockExplorerUrls: [
-                  chain === "bsc"
-                    ? "https://bscscan.com"
-                    : "https://etherscan.io",
-                ],
-              },
-            ],
-          });
-        } catch (addError) {
-          console.error("Failed to add chain", addError);
-          setError("Failed to add network to MetaMask");
-          return;
-        }
+      const targetChainId = EVMNetwork[chain].chainId;
+
+      const supportsSwitching =
+        await primaryWallet?.connector?.supportsNetworkSwitching?.();
+
+      if (supportsSwitching && primaryWallet) {
+        await primaryWallet.switchNetwork(targetChainId);
+        console.log("✅ Switched to network:", targetChainId);
+
+        // ⬇️ Reconnect provider after switching
+        await connectWallet();
       } else {
-        console.error("Switch chain error", switchError);
-        setError("Failed to switch network");
-        return;
+        console.warn("⚠️ Network switching not supported by this wallet.");
+        setError("This wallet doesn't support network switching.");
       }
+    } catch (err) {
+      console.error("Switch network failed", err);
+      setError("Failed to switch network.");
     }
-
-    const providerInstance = new ethers.BrowserProvider(ethereum);
-    setProvider(providerInstance);
   };
 
-  const connectWallet = async () => {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) {
-      alert("MetaMask not detected");
-      return;
-    }
+  useEffect(() => {
+    if (primaryWallet) {
+      primaryWallet.isConnected().then((connected) => {
+        if (connected) {
+          connectWallet();
 
-    try {
-      const accounts = await ethereum.request({
-        method: "eth_requestAccounts",
+          const fetchNetworkAndTokens = async () => {
+            if (primaryWallet?.connector) {
+              const network = await getNetwork(primaryWallet.connector);
+              console.log("Current network:", network);
+              if (network) {
+                const parsedNetwork =
+                  typeof network === "string" ? parseInt(network) : network;
+                console.log("Current network:", parsedNetwork);
+                if (parsedNetwork === EVMNetwork.bsc.chainId) {
+                  setSelectedChain("bsc");
+                }
+                if (parsedNetwork === EVMNetwork.ethereum.chainId) {
+                  setSelectedChain("ethereum");
+                }
+              }
+            }
+          };
+
+          fetchNetworkAndTokens();
+        } else {
+          console.log("Wallet is not connected");
+        }
       });
-      setWalletAddress(accounts[0]);
-      await handleChainChange(selectedChain);
-    } catch (error) {
-      console.error("Wallet connect error", error);
-      setError("Failed to connect wallet");
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryWallet]);
 
   return {
     walletAddress,
@@ -104,6 +105,5 @@ export const useWallet = (initialChain: SupportedNetwork) => {
     error,
     setError,
     handleChainChange,
-    connectWallet,
   };
 };
