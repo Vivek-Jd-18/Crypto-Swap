@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+
+
+/* Hide Next.js dev error overlay (Pages Router) */
+#__nextjs__container_errors {
+  display: none !important;
+}
+
+/* Hide error overlay (App Router + Turbopack) */
+[aria-label="Next.js Overlay"] {
+  display: none !important;
+  pointer-events: none !important;
+}
