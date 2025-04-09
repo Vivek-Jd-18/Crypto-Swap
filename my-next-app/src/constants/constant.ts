@@ -35,3 +35,5 @@ export const bnb_tokens = [
     decimals: 18,
   },
 ];
+
+export const DYNAMIC_ENV_ID = "05d139da-18a5-4d09-bd56-e12ae2a735ca";

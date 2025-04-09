@@ -1,5 +1,11 @@
-import { Toaster } from "sonner";
 import "./globals.css";
+import { Toaster } from "sonner";
+import {
+  DynamicContextProvider,
+  DynamicWidget,
+} from "@dynamic-labs/sdk-react-core";
+import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
+import { DYNAMIC_ENV_ID } from "@/constants/constant";
 
 export default function RootLayout({
   children,
@@ -9,8 +15,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <Toaster richColors position="top-right" />
+        <DynamicContextProvider
+          settings={{
+            environmentId: DYNAMIC_ENV_ID,
+            walletConnectors: [EthereumWalletConnectors],
+          }}
+        >
+          {children}
+          <Toaster richColors position="top-right" />
+        </DynamicContextProvider>
       </body>
     </html>
   );

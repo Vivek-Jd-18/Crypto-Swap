@@ -10,6 +10,8 @@ import { useSwap } from "@/hooks/useSwap";
 import axios from "axios";
 import { Listbox } from "@headlessui/react";
 import { ChevronUpDownIcon } from "@heroicons/react/20/solid";
+import { DynamicWidget, useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { getWeb3Provider, getSigner } from "@dynamic-labs/ethers-v6";
 
 const CryptoSwap = () => {
   const [tokens, setTokens] = useState<any[]>([]);
@@ -19,6 +21,13 @@ const CryptoSwap = () => {
   const [isSwapping, setIsSwapping] = useState(false);
   const [slippage, setSlippage] = useState("0.01");
 
+  const fetchWallet = async () => {
+    const { primaryWallet } = useDynamicContext();
+
+    const provider = await getWeb3Provider(primaryWallet!);
+    const signer = await getSigner(primaryWallet!);
+    console.log(primaryWallet?.address, provider, signer, "fetchWallet");
+  };
   const {
     walletAddress,
     selectedChain,
@@ -140,6 +149,9 @@ const CryptoSwap = () => {
     if (swapError) toast.error(swapError);
   }, [swapError]);
 
+  useEffect(() => {
+    
+  },[])
   const isAmountValid = amount && Number(amount) > 0;
 
   const getTokenDetails = (address: string) =>
@@ -336,7 +348,7 @@ const CryptoSwap = () => {
               disabled
               className="w-full mb-4 p-3 rounded-xl bg-gray-700 text-white placeholder-gray-400 opacity-70"
             />
-            <Button
+            {/* <Button
               onClick={connectWallet}
               className={`w-full mb-3 ${
                 walletAddress ? "bg-gray-500 cursor-not-allowed" : ""
@@ -344,11 +356,12 @@ const CryptoSwap = () => {
               disabled={!!walletAddress}
             >
               {walletAddress ? "Wallet Connected" : "Connect Wallet"}
-            </Button>
+            </Button> */}
+            <DynamicWidget />
             <Button
               className={`w-full ${
                 !isAmountValid || isSwapping
-                  ? "bg-gray-500 cursor-not-allowed"
+                  ? "bg-gray-500 cursor-not-allowed mt-3.5"
                   : ""
               }`}
               onClick={onSwap}
